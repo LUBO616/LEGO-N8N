@@ -3,42 +3,39 @@ LEGO-N8N 🧱🤖 (Plantilla tipo LEGO para n8n + Docker)
 IDEA:
 - CORE (base): n8n + Postgres (siempre)
 - MÓDULOS (piezas opcionales): proxy, ollama, qdrant, redis, etc.
-- RECETAS: combinaciones listas para levantar (basic, assistant, ai-rag...)
+- RECETAS: combinaciones listas (basic, assistant, assistant-ollama...)
 
 ESTRUCTURA:
 compose/
-  core.yaml                 Core: n8n + postgres + red + volúmenes
-  modules/                  Piezas opcionales (proxy, ollama...)
+  core.yaml                 Core: n8n + postgres + red + volúmenes (SIN exponer puertos por defecto)
+  modules/
+    expose-n8n.yaml         Módulo: expone n8n en :5678 (cuando NO usas proxy)
+    proxy-caddy.yaml        Módulo: proxy HTTP :80 -> n8n
 
 env/
   core.env.example          Ejemplo de variables (sin secretos reales)
-  modules/                  Ejemplos de variables por módulo (opcional)
+  modules/                  Ejemplos de variables por módulo
 
 recipes/
-  basic.txt                 Receta: core
-  assistant.txt             Receta: core + módulos (cuando existan)
+  basic.txt                 Receta: core + expose-n8n (entrar por http://IP:5678)
+  assistant.txt             Receta: core + proxy-caddy (entrar por http://IP/)
 
 scripts/
   stack.sh                  “Control remoto” para levantar recetas
 
 modules/
-  proxy-caddy/              Archivos extra de un módulo (Caddyfile, etc.)
+  proxy-caddy/              Config del proxy (Caddyfile)
 
 n8n/
   workflows/                Export/backup de flujos (JSON)
 
 data/                       Persistencia local (NO se sube a GitHub)
-  n8n/                      Config y estado de n8n
-  postgres/                 Data directory de Postgres
+  n8n/                      Config/credenciales
+  postgres/                 Data directory
 
 REQUISITOS (Ubuntu/Debian):
-- git
-- docker
-- docker compose plugin
-
-INSTALAR DOCKER:
 sudo apt update
-sudo apt install -y docker.io docker-compose-plugin
+sudo apt install -y git docker.io docker-compose-plugin
 sudo systemctl enable --now docker
 
 PERMISOS DOCKER (para no usar sudo):
@@ -51,19 +48,26 @@ cp env/core.env.example .env
 nano .env
 - Cambia POSTGRES_PASSWORD
 - Cambia N8N_ENCRYPTION_KEY (32+ chars)
+- Si usas HTTP con proxy: N8N_SECURE_COOKIE=false
 
-LEVANTAR CORE:
+LEVANTAR (modo LEGO con recetas):
 ./scripts/stack.sh up basic
 ./scripts/stack.sh ps basic
+Abrir: http://IP_DEL_SERVIDOR:5678
 
-ABRIR n8n:
-http://localhost:5678
-(o desde LAN: http://IP_DEL_SERVIDOR:5678)
+./scripts/stack.sh up assistant
+./scripts/stack.sh ps assistant
+Abrir: http://IP_DEL_SERVIDOR/
+
+NOTAS IMPORTANTES:
+- stack.sh usa: --project-directory . y --env-file .env
+- stack.sh usa: --remove-orphans (para quitar módulos que ya no se usan al cambiar de receta)
+- data/ y .env NO se suben a GitHub
 
 TROUBLESHOOTING:
 Revisa docs/troubleshooting/ para errores comunes:
 - Docker permission denied
-- Variables not set (.env no leído)
+- .env no leído (Variables not set)
 - n8n EACCES en /home/node/.n8n
-- Postgres permisos UID/GID + ACL
-- Warning de Python missing
+- Postgres UID/GID + ACL
+- Secure cookie (HTTP vs HTTPS)

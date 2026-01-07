@@ -1,0 +1,22 @@
+PROBLEMA: n8n "secure cookie" al entrar por HTTP (muy común detrás de proxy)
+SÍNTOMA:
+Pantalla que dice:
+"Your n8n server is configured to use a secure cookie... visiting via an insecure URL..."
+
+CAUSA:
+n8n intenta usar cookies "Secure" (solo funcionan en HTTPS),
+pero estás entrando por http://IP/ o http://IP:5678
+
+SOLUCIÓN RÁPIDA (LAN por HTTP):
+1) En tu .env agrega:
+   N8N_SECURE_COOKIE=false
+
+2) En compose/core.yaml (service n8n -> environment) agrega:
+   N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+
+3) Reinicia la receta que uses:
+   ./scripts/stack.sh down assistant
+   ./scripts/stack.sh up assistant
+
+NOTA:
+La solución pro es HTTPS, pero para LAN sin dominio esto es lo práctico.
