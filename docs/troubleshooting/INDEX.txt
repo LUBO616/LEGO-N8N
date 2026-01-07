@@ -6,3 +6,4 @@ TROUBLESHOOTING INDEX
 04-postgres-permissions-uidgid-acl.txt
 05-python-missing-warning.txt
 06-n8n-secure-cookie-http.txt
+07-ollama-mkdir-models-no-such-file.txt
