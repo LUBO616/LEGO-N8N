@@ -1,0 +1,18 @@
+PROBLEMA: permission denied al usar docker (docker.sock)
+SÍNTOMA:
+- "permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock"
+
+CAUSA:
+Tu usuario NO está en el grupo "docker", entonces solo root (sudo) puede usar docker.
+
+SOLUCIÓN:
+1) Agrega tu usuario al grupo docker:
+   sudo usermod -aG docker $USER
+
+2) Recarga la sesión (rápido):
+   newgrp docker
+
+   (alternativa: cerrar sesión y entrar de nuevo)
+
+3) Prueba:
+   docker ps

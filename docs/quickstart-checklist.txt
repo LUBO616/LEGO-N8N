@@ -1,0 +1,25 @@
+CHECKLIST RÁPIDO (para levantar sin pedos)
+
+1) Docker sin sudo:
+sudo usermod -aG docker $USER
+newgrp docker
+docker ps
+
+2) Variables:
+cp env/core.env.example .env
+nano .env   (cambia POSTGRES_PASSWORD y N8N_ENCRYPTION_KEY)
+
+3) Levantar:
+./scripts/stack.sh up basic
+./scripts/stack.sh ps basic
+
+4) Abrir:
+http://localhost:5678
+
+5) Si n8n truena por EACCES:
+sudo chown -R 1000:1000 ./data/n8n
+./scripts/stack.sh up basic
+
+6) Postgres dueño correcto:
+docker exec lego-postgres sh -c 'id -u postgres; id -g postgres'
+sudo chown -R <UID>:<GID> ./data/postgres

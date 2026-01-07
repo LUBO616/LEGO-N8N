@@ -1,0 +1,33 @@
+PROBLEMA: Permisos en ./data/postgres (bind mount)
+OBJETIVO:
+- Postgres debe ser dueño real de su data directory, o puede fallar al reiniciar.
+- Tú (usuario host) quieres poder listar archivos sin romper Postgres.
+
+PASO A PASO (CORRECTO):
+
+1) Ver UID/GID de postgres dentro del contenedor:
+docker exec lego-postgres sh -c 'id -u postgres; id -g postgres'
+
+Ejemplo de salida:
+70
+70
+
+2) Poner dueño correcto en host (usa esos números):
+sudo chown -R 70:70 ./data/postgres
+
+3) Reinicia postgres:
+docker restart lego-postgres
+docker ps
+
+4) Si ahora te da "Permission denied" al hacer ls, NO cambies dueño.
+Dale acceso con ACL:
+
+sudo apt install -y acl
+sudo setfacl -R -m u:$USER:rx ./data/postgres
+sudo setfacl -R -d -m u:$USER:rx ./data/postgres
+
+5) Prueba:
+ls -la ./data/postgres | head
+
+NOTA:
+Verás un "+" al final de permisos (ej: drwxr-x---+) => significa que hay ACL aplicado.
