@@ -1,0 +1,25 @@
+# MODULE TEMPLATE (LEGO-N8N)
+# - Este archivo se "suma" al core.yaml usando una receta.
+# - Regla: lo persistente va en ./data/<modulo>
+# - Regla: todos los servicios deben estar en la red [lego]
+# - Regla: container_name con prefijo lego-<modulo>
+
+services:
+  example:
+    image: example/image:latest
+    container_name: lego-example
+
+    # (opcional) Puertos: solo si quieres exponer al host
+    # ports:
+    #   - "1234:1234"
+
+    # Persistencia (recomendado)
+    volumes:
+      - ./data/example:/data
+
+    # Variables (si aplica)
+    # environment:
+    #   EXAMPLE_VAR: ${EXAMPLE_VAR:-value}
+
+    networks: [lego]
+    restart: unless-stopped
