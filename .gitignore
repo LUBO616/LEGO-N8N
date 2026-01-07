@@ -1,6 +1,9 @@
+# Datos persistentes (no se suben)
+data/
+
+# Variables reales (secretos)
 .env
-**/.env
+
+# Basura típica
 *.log
-.vscode/
-.idea/
 .DS_Store
