@@ -25,7 +25,7 @@ done < "$RECIPE_FILE"
 BASE=(docker compose --project-directory . --env-file .env)
 
 case "$ACTION" in
-  up)     "${BASE[@]}" "${FILES[@]}" up -d ;;
+  up)     "${BASE[@]}" "${FILES[@]}" up -d --remove-orphans ;;
   down)   "${BASE[@]}" "${FILES[@]}" down ;;
   ps)     "${BASE[@]}" "${FILES[@]}" ps ;;
   logs)   "${BASE[@]}" "${FILES[@]}" logs -f ;;

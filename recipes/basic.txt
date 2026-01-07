@@ -1,1 +1,2 @@
 compose/core.yaml
+compose/modules/expose-n8n.yaml

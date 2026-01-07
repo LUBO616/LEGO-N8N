@@ -1,0 +1,2 @@
+compose/core.yaml
+compose/modules/proxy-caddy.yaml
