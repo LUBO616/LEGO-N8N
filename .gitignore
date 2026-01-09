@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Local persistent data (NO se sube a git)
+data/
+
+# n8n local state / exports temporales
+*.log
+*.tmp
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
