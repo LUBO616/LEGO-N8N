@@ -1,8 +1,0 @@
-services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: lego-ollama
-    volumes:
-      - ./data/ollama:/root/.ollama
-    networks: [lego]
-    restart: unless-stopped

@@ -1,3 +1,0 @@
-:80 {
-  reverse_proxy lego-n8n:5678
-}

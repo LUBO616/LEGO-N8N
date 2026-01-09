@@ -1,4 +1,0 @@
-compose/core.yaml
-compose/modules/proxy-caddy.yaml
-compose/modules/ollama.yaml
-compose/modules/expose-ollama.yaml

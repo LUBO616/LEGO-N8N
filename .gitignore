@@ -1,9 +1,0 @@
-# Datos persistentes (no se suben)
-data/
-
-# Variables reales (secretos)
-.env
-
-# Basura típica
-*.log
-.DS_Store
