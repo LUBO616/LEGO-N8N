@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lego_postgres
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: lego_n8n
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      TZ: ${TZ}
+      N8N_PORT: ${N8N_PORT}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE}
+
+      # URL pública para links/webhooks
+      N8N_EDITOR_BASE_URL: ${PUBLIC_URL}
+      WEBHOOK_URL: ${PUBLIC_URL}/
+
+      # DB
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ../data/n8n:/home/node/.n8n
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: lego_caddy
+    restart: unless-stopped
+    depends_on:
+      - n8n
+    ports:
+      - "80:80"
+    volumes:
+      - ../modules/proxy-caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../data/caddy:/data

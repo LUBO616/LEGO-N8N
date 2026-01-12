@@ -1,0 +1,13 @@
+# Secrets
+.env
+
+# Persistencia local (NO va a git)
+data/
+
+# Logs
+*.log
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
