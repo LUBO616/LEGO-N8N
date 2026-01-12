@@ -1,0 +1,182 @@
+LEGO-N8N — CORE — CÓMO FUNCIONA TODO (MANUAL PARA P*ND*JOS)
+==========================================================
+
+Si NO sabes nada de Docker, n8n, proxy, puertos, DB… este doc es para ti.
+La meta: entender qué levantamos, cómo se conecta, y por qué existe cada cosa.
+
+0) La idea general
+------------------
+Queremos correr n8n (una app de automatización) en un servidor.
+Pero n8n necesita:
+1) Una Base de Datos para guardar cosas (usuarios, flujos, credenciales, historial)
+2) Un "proxy" para entrar fácil por la IP (puerto 80) sin escribir puertos raros
+
+Por eso el CORE tiene:
+- n8n      (la app)
+- postgres (la base de datos)
+- caddy    (proxy / puerta de entrada HTTP)
+
+1) ¿Qué es Docker?
+------------------
+Docker es como una "caja" que trae un programa con TODO lo que necesita para correr.
+Esa caja se llama CONTENEDOR.
+
+- Imagen = la plantilla (como ISO)
+- Contenedor = ya corriendo (como VM encendida, pero más ligera)
+
+Ventaja:
+- No instalas n8n “a mano” en Linux, solo corres contenedores.
+- Siempre se instala igual en cualquier server.
+
+2) ¿Qué es docker compose?
+--------------------------
+Es un archivo (YAML) que describe:
+- Qué contenedores correr
+- Qué puertos abrir
+- Qué variables usar
+- Qué carpetas guardar (volúmenes)
+
+Nuestro archivo clave:
+compose/core.yaml
+
+Ahí se define todo el CORE.
+
+3) ¿Qué es n8n?
+---------------
+n8n es una herramienta de automatización:
+- Haces "workflows" (flujos)
+- Con nodos conectas cosas: webhooks, APIs, DBs, IA, etc.
+
+Ejemplos:
+- "Cuando llegue una petición web, responde"
+- "Cuando haya un archivo, guárdalo"
+- "Conecta IA con una base de conocimiento"
+
+4) ¿Por qué n8n necesita una DB?
+--------------------------------
+Porque n8n guarda:
+- usuarios / permisos
+- workflows
+- credenciales (cifradas)
+- ejecuciones/historial
+
+En nuestro CORE la DB es Postgres:
+- Servicio: postgres
+- Persistencia local: data/postgres/
+
+Si borras data/postgres, pierdes DB (se reinicia en blanco).
+
+5) ¿Qué es un proxy y por qué Caddy?
+------------------------------------
+Un proxy (reverse proxy) es como un "portero" o "recepcionista".
+
+Problema típico:
+- n8n corre en el puerto 5678 (http://IP:5678)
+- Eso es incómodo para usuarios y redes
+
+Solución:
+- Caddy escucha el puerto 80 (http://IP)
+- Cuando entra una petición, Caddy la manda a n8n adentro
+
+En simple:
+Navegador -> Caddy (puerto 80) -> n8n (puerto 5678)
+
+Archivo del proxy:
+modules/proxy-caddy/Caddyfile
+
+Contenido mínimo:
+:80 {
+  reverse_proxy n8n:5678
+}
+
+6) ¿Cómo se conectan entre sí (la red interna)?
+-----------------------------------------------
+Docker crea una red interna para los servicios del compose.
+
+Dentro de esa red:
+- n8n puede hablar con postgres usando el nombre "postgres"
+- caddy puede hablar con n8n usando el nombre "n8n"
+
+Esto NO requiere IPs reales, se conectan por nombre.
+
+Conexiones:
+- n8n -> postgres:5432
+- caddy -> n8n:5678
+
+7) ¿Qué son los volúmenes (data/)? ¿por qué importan?
+-----------------------------------------------------
+Si un contenedor muere o lo reinicias, normalmente perderías sus datos.
+Los volúmenes son carpetas del HOST (tu Linux) que se montan dentro del contenedor,
+para que los datos se queden guardados.
+
+Ejemplos:
+- Postgres guarda su DB en: data/postgres/
+- n8n guarda config en: data/n8n/
+- Caddy guarda su data en: data/caddy/
+
+REGLA:
+- data/ NO se sube a GitHub
+Porque es pesado y contiene información sensible.
+
+8) ¿Qué son las variables de entorno (.env) y por qué importan?
+---------------------------------------------------------------
+Las variables son configuración sin tocar el código.
+
+Ejemplos:
+- PUBLIC_URL: el URL público por el que entras (IP o dominio)
+- N8N_ENCRYPTION_KEY: clave para cifrar credenciales en n8n
+- POSTGRES_PASSWORD: password de la DB
+
+IMPORTANTE:
+- .env NO se sube a GitHub (porque trae secretos)
+- env/core.env.example SÍ se sube (para que el equipo tenga plantilla)
+
+9) ¿Qué pedo con "secure cookie"?
+---------------------------------
+Las cookies seguras (secure cookie) se mandan SOLO por HTTPS.
+Si tú entras por HTTP (por IP), n8n detecta inseguridad y puede bloquear login.
+
+Soluciones:
+A) Recomendado (producción): usar HTTPS (más adelante)
+B) Laboratorio/LAN: desactivar secure cookie
+
+Para laboratorio:
+- En .env:
+  N8N_SECURE_COOKIE=false
+- En n8n (compose):
+  N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE}
+- Reiniciar contenedores
+
+Esto es "no recomendado" para internet, pero OK para LAN/estudio.
+
+10) ¿Qué es "recipes" y el script stack.sh?
+-------------------------------------------
+La idea del proyecto LEGO-N8N:
+- CORE siempre (n8n + db + proxy)
+- MÓDULOS opcionales (ej. ollama, qdrant, minio, redis...)
+
+"recipes" = listas de qué levantar.
+scripts/stack.sh = comando único para levantar sin memorizar mil cosas.
+
+Ejemplo:
+./scripts/stack.sh recipes/basic.txt up -d
+
+11) ¿Qué son “módulos” aquí?
+----------------------------
+Un módulo es un servicio extra que NO es obligatorio para que n8n funcione.
+
+Ejemplo:
+- Ollama (IA local) = módulo
+- Qdrant (vector DB) = módulo
+
+En este punto:
+- Ollama existe como archivos de módulo
+- Pero NO se levanta hasta que decidamos
+
+12) ¿Qué ganamos con este diseño?
+---------------------------------
+- Orden: core estable, módulos opcionales
+- Equipo: todos instalan igual
+- Repetible: levantar / bajar sin instalar manualmente
+- Escalable: vas sumando módulos sin romper core
+

@@ -1,0 +1,190 @@
+LEGO-N8N — CORE (n8n + Postgres + Caddy) — PASO A PASO
+=======================================================
+
+Este documento explica cómo levantar el CORE del proyecto desde cero.
+CORE = n8n (automatización) + Postgres (DB) + Caddy (proxy HTTP)
+
+IMPORTANTE (Reglas del repo)
+----------------------------
+- NO subas a GitHub:
+  - data/   (persistencia local)
+  - .env    (secretos)
+- Sí se sube:
+  - env/*.env.example (plantillas)
+  - compose/*.yaml
+  - scripts/*.sh
+  - modules/* (assets, ej Caddyfile)
+  - docs/*
+
+Estructura mínima (hasta este punto)
+------------------------------------
+LEGO-N8N/
+├─ compose/
+│  ├─ core.yaml                (CORE: n8n + postgres + caddy)
+│  └─ modules/
+│     └─ ollama.yaml           (MÓDULO: NO se levanta aún)
+├─ env/
+│  ├─ core.env.example         (plantilla del core)
+│  └─ modules/
+│     └─ ollama.env.example    (plantilla módulo)
+├─ modules/
+│  └─ proxy-caddy/
+│     └─ Caddyfile             (config de Caddy)
+├─ scripts/
+│  └─ stack.sh                 (wrapper para docker compose)
+├─ recipes/
+│  └─ basic.txt                (receta: core)
+├─ docs/
+│  └─ (este archivo y más docs)
+└─ data/                       (persistencia local, NO se sube a git)
+   ├─ postgres/
+   ├─ n8n/
+   ├─ caddy/
+   └─ ollama/
+
+1) Crear carpetas base (si el repo está vacío)
+----------------------------------------------
+mkdir -p compose/modules
+mkdir -p env/modules
+mkdir -p scripts
+mkdir -p recipes
+mkdir -p modules/proxy-caddy
+mkdir -p docs
+mkdir -p data/{postgres,n8n,caddy,ollama}
+
+2) .gitignore (NO subir data/ ni .env)
+--------------------------------------
+Crea/valida que .gitignore contenga:
+- .env
+- data/
+
+Ejemplo mínimo:
+.env
+data/
+
+3) Crear variables (plantilla) y .env real
+------------------------------------------
+3.1 Plantilla (se sube a git):
+env/core.env.example
+
+3.2 .env real (NO se sube a git):
+cp env/core.env.example .env
+nano .env
+
+Variables importantes:
+- PUBLIC_URL  -> Debe ser el URL por el que vas a entrar a n8n.
+  Ejemplos:
+    PUBLIC_URL=http://localhost
+    PUBLIC_URL=http://192.168.10.20
+- N8N_ENCRYPTION_KEY -> clave fuerte, mínimo 32 chars.
+- POSTGRES_PASSWORD -> password de la DB.
+- N8N_SECURE_COOKIE=false  -> necesario si entras por IP en HTTP (sin https).
+
+Ejemplo de .env (LAN HTTP):
+TZ=America/Mexico_City
+PUBLIC_URL=http://192.168.10.20
+N8N_PORT=5678
+N8N_ENCRYPTION_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+POSTGRES_DB=n8n
+POSTGRES_USER=n8n
+POSTGRES_PASSWORD=xxxxxxxx
+N8N_SECURE_COOKIE=false
+
+Tip para generar clave fuerte:
+openssl rand -hex 32
+
+4) Proxy Caddy (HTTP) — Caddyfile
+---------------------------------
+Archivo:
+modules/proxy-caddy/Caddyfile
+
+Contenido mínimo:
+:80 {
+  reverse_proxy n8n:5678
+}
+
+5) CORE Compose: n8n + postgres + caddy
+---------------------------------------
+Archivo:
+compose/core.yaml
+
+Este archivo define 3 servicios:
+- postgres (DB)
+- n8n      (app)
+- caddy    (proxy)
+
+Notas:
+- Los volúmenes apuntan a ../data/... porque el compose está en la carpeta compose/.
+
+6) Script para levantar (stack.sh)
+----------------------------------
+Archivo:
+scripts/stack.sh
+
+Uso:
+./scripts/stack.sh recipes/basic.txt up -d
+./scripts/stack.sh recipes/basic.txt ps
+./scripts/stack.sh recipes/basic.txt logs -n 80 n8n
+./scripts/stack.sh recipes/basic.txt down
+
+7) Recipe (basic)
+-----------------
+Archivo:
+recipes/basic.txt
+
+Contenido:
+core
+
+8) Levantar el CORE
+-------------------
+cd ~/LEGO-N8N
+./scripts/stack.sh recipes/basic.txt up -d
+
+Ver estado:
+./scripts/stack.sh recipes/basic.txt ps
+
+Ver logs:
+./scripts/stack.sh recipes/basic.txt logs -n 120 caddy
+./scripts/stack.sh recipes/basic.txt logs -n 120 n8n
+./scripts/stack.sh recipes/basic.txt logs -n 120 postgres
+
+9) Entrar a n8n
+---------------
+En tu navegador:
+- Si estás en el servidor:
+  http://localhost
+- Si entras desde otra PC en LAN:
+  http://IP_DEL_SERVIDOR
+
+IMPORTANTE:
+Si entras por IP en HTTP, puede salir aviso de "secure cookie".
+Solución (para laboratorio/LAN):
+- En .env:
+  N8N_SECURE_COOKIE=false
+- En compose/core.yaml (servicio n8n):
+  N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE}
+- Reinicia:
+  ./scripts/stack.sh recipes/basic.txt down
+  ./scripts/stack.sh recipes/basic.txt up -d
+
+10) Apagar el CORE
+------------------
+./scripts/stack.sh recipes/basic.txt down
+
+11) Guardar avance en GitHub (equipo)
+-------------------------------------
+Regla: NO trabajes directo en main. Usa una rama y PR.
+
+Ver cambios:
+git status
+
+Agregar:
+git add docs/01-core-paso-a-paso.txt
+
+Commit:
+git commit -m "docs: core paso a paso (n8n+postgres+caddy)"
+
+Push:
+git push -u origin <tu-rama>
+
+Luego: abrir PR en GitHub hacia main.
